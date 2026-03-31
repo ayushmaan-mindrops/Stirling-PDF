@@ -548,31 +548,8 @@ const QuickAccessBar = forwardRef<HTMLDivElement>((_, ref) => {
         handleReaderToggle();
       }
     },
-    {
-      id: 'automate',
-      name: t("quickAccess.automate", "Automate"),
-      icon: <LocalIcon icon="automation-outline" width="1.25rem" height="1.25rem" />,
-      size: 'md' as const,
-      isRound: false,
-      type: 'navigation' as const,
-      onClick: () => {
-        setActiveButton('automate');
-        // If already on automate tool, reset it directly
-        if (selectedToolKey === 'automate') {
-          resetTool('automate');
-        } else {
-          handleToolSelect('automate');
-        }
-      }
-    },
-  ].filter(button => {
-    // Filter out buttons for disabled tools
-    // 'read' is always available (viewer mode)
-    if (button.id === 'read') return true;
-    // Check if tool is actually available (not just present in registry)
-    const availability = toolAvailability[button.id as keyof typeof toolAvailability];
-    return availability?.available !== false;
-  }), [t, setActiveButton, handleReaderToggle, selectedToolKey, resetTool, handleToolSelect, toolAvailability]);
+    // DISABLED FOR PAPERBOLT V1: Automate tab removed
+  ], [t, setActiveButton, handleReaderToggle]);
 
   const middleButtons: ButtonConfig[] = [
     {
@@ -596,36 +573,8 @@ const QuickAccessBar = forwardRef<HTMLDivElement>((_, ref) => {
   //  onClick: () => setActiveButton('activity')
   //},
 
-  // Determine if settings button should be hidden
-  // Hide when login is disabled AND showSettingsWhenNoLogin is false
-  const shouldHideSettingsButton =
-    config?.enableLogin === false &&
-    config?.showSettingsWhenNoLogin === false;
-
-  const bottomButtons: ButtonConfig[] = [
-    {
-      id: 'help',
-      name: t("quickAccess.tours", "Tours"),
-      icon: <LocalIcon icon="explore-rounded" width="1.25rem" height="1.25rem" />,
-      isRound: true,
-      size: 'md',
-      type: 'action',
-      onClick: () => {
-        // This will be overridden by the wrapper logic
-      },
-    },
-    ...(shouldHideSettingsButton ? [] : [{
-      id: 'config',
-      name: t("quickAccess.settings", "Settings"),
-      icon: configButtonIcon ?? <LocalIcon icon="settings-rounded" width="1.25rem" height="1.25rem" />,
-      size: 'md' as const,
-      type: 'modal' as const,
-      onClick: () => {
-        navigate('/settings/overview');
-        setConfigModalOpen(true);
-      }
-    } as ButtonConfig])
-  ];
+  // DISABLED FOR PAPERBOLT V1: Tours and Settings tabs removed
+  const bottomButtons: ButtonConfig[] = [];
 
 
   return (

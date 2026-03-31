@@ -15,12 +15,11 @@ describe('useLogoAssets - Logo Asset Files', () => {
   const requiredAssets = [
     'logo-tooltip.svg',
     'Firstpage.png',
-    'favicon.ico',
-    'logo192.png',
-    'logo512.png',
-    'StirlingPDFLogoWhiteText.svg',
-    'StirlingPDFLogoBlackText.svg',
-    'StirlingPDFLogoGreyText.svg',
+    'PaperBolt Favicon.png',
+    'PaperBolt LOGO.png',
+    'PaperBoltLogoWhiteText.svg',
+    'PaperBoltLogoBlackText.svg',
+    'PaperBoltLogoGreyText.svg',
   ];
 
   const logoVariants: LogoVariant[] = ['modern', 'classic'];

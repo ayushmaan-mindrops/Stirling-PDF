@@ -41,6 +41,7 @@ import stirling.software.common.configuration.InstallationPathConfig;
 import stirling.software.common.configuration.YamlPropertySourceFactory;
 import stirling.software.common.constants.JwtConstants;
 import stirling.software.common.model.exception.UnsupportedProviderException;
+import stirling.software.common.model.oauth2.AzureADProvider;
 import stirling.software.common.model.oauth2.GitHubProvider;
 import stirling.software.common.model.oauth2.GoogleProvider;
 import stirling.software.common.model.oauth2.KeycloakProvider;
@@ -417,12 +418,14 @@ public class ApplicationProperties {
                 private GoogleProvider google = new GoogleProvider();
                 private GitHubProvider github = new GitHubProvider();
                 private KeycloakProvider keycloak = new KeycloakProvider();
+                private AzureADProvider azure = new AzureADProvider();
 
                 public Provider get(String registrationId) throws UnsupportedProviderException {
                     return switch (registrationId.toLowerCase(Locale.ROOT)) {
                         case "google" -> getGoogle();
                         case "github" -> getGithub();
                         case "keycloak" -> getKeycloak();
+                        case "azure" -> getAzure();
                         default ->
                                 throw new UnsupportedProviderException(
                                         "Logout from the provider "

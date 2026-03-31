@@ -59,8 +59,8 @@ export function TrialStatusBanner() {
 
     const logoIcon = (
       <img
-        src={`${BASE_PATH}/modern-logo/logo512.png`}
-        alt="Stirling PDF"
+        src={`${BASE_PATH}/classic-logo/PaperBolt%20LOGO.png`}
+        alt="PaperBolt"
         style={{
           width: '1.5rem',
           height: '1.5rem',

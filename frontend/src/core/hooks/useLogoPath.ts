@@ -16,7 +16,7 @@ export function useLogoPath(): string {
   const { folderPath } = useLogoAssets();
 
   return useMemo(() => {
-    const themeSuffix = colorScheme === 'dark' ? 'Dark' : 'Light';
-    return `${folderPath}/StirlingPDFLogoNoText${themeSuffix}.svg`;
+    void colorScheme;
+    return `${folderPath}/PaperBolt%20LOGO.png`;
   }, [colorScheme, folderPath]);
 }

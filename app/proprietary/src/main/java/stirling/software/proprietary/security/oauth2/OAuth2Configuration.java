@@ -30,6 +30,7 @@ import stirling.software.common.model.ApplicationProperties;
 import stirling.software.common.model.ApplicationProperties.Security.OAUTH2;
 import stirling.software.common.model.ApplicationProperties.Security.OAUTH2.Client;
 import stirling.software.common.model.enumeration.UsernameAttribute;
+import stirling.software.common.model.oauth2.AzureADProvider;
 import stirling.software.common.model.oauth2.GitHubProvider;
 import stirling.software.common.model.oauth2.GoogleProvider;
 import stirling.software.common.model.oauth2.KeycloakProvider;
@@ -66,6 +67,7 @@ public class OAuth2Configuration {
         oidcClientRegistration().ifPresent(registrations::add);
         googleClientRegistration().ifPresent(registrations::add);
         keycloakClientRegistration().ifPresent(registrations::add);
+        azureClientRegistration().ifPresent(registrations::add);
 
         if (registrations.isEmpty()) {
             log.error("No OAuth2 provider registered - check your OAuth2 configuration");
@@ -184,6 +186,61 @@ public class OAuth2Configuration {
                                 .userNameAttributeName(github.getUseAsUsername().getName())
                                 .clientName(github.getClientName())
                                 .redirectUri(REDIRECT_URI_PATH + github.getName())
+                                .authorizationGrantType(AUTHORIZATION_CODE)
+                                .build())
+                : Optional.empty();
+    }
+
+    private Optional<ClientRegistration> azureClientRegistration() {
+        OAUTH2 oAuth2 = applicationProperties.getSecurity().getOauth2();
+
+        if (isOAuth2Disabled(oAuth2)) {
+            log.debug("OAuth2 is disabled, skipping Azure AD client registration");
+            return Optional.empty();
+        }
+
+        Client client = oAuth2.getClient();
+        if (client == null) {
+            log.debug("OAuth2 client configuration is null, skipping Azure AD");
+            return Optional.empty();
+        }
+
+        AzureADProvider azureClient = client.getAzure();
+        if (azureClient == null) {
+            log.debug("Azure AD client configuration is null");
+            return Optional.empty();
+        }
+
+        AzureADProvider azure =
+                new AzureADProvider(
+                        azureClient.getTenantId(),
+                        azureClient.getClientId(),
+                        azureClient.getClientSecret(),
+                        azureClient.getScopes(),
+                        azureClient.getUseAsUsername());
+
+        boolean isValid = validateProvider(azure);
+
+        if (isValid) {
+            log.info(
+                    "Initialised Azure AD OAuth2 provider: registrationId='{}', tenantId='{}', redirectUri='{}'",
+                    azure.getName(),
+                    azure.getTenantId(),
+                    REDIRECT_URI_PATH + azure.getName());
+        }
+
+        return isValid
+                ? Optional.of(
+                        ClientRegistration.withRegistrationId(azure.getName())
+                                .clientId(azure.getClientId())
+                                .clientSecret(azure.getClientSecret())
+                                .scope(azure.getScopes())
+                                .authorizationUri(azure.getAuthorizationUri())
+                                .tokenUri(azure.getTokenUri())
+                                .userInfoUri(azure.getUserInfoUri())
+                                .userNameAttributeName(azure.getUseAsUsername().getName())
+                                .clientName(azure.getClientName())
+                                .redirectUri(REDIRECT_URI_PATH + azure.getName())
                                 .authorizationGrantType(AUTHORIZATION_CODE)
                                 .build())
                 : Optional.empty();

@@ -17,13 +17,13 @@ export function useLogoAssets() {
       getAssetPath: (name: string) => `${folderPath}/${name}`,
       tooltipLogo: `${folderPath}/logo-tooltip.svg`,
       firstPage: `${folderPath}/Firstpage.png`,
-      favicon: `${folderPath}/favicon.ico`,
-      logo192: `${folderPath}/logo192.png`,
-      logo512: `${folderPath}/logo512.png`,
+      favicon: `${folderPath}/PaperBolt%20Favicon.png`,
+      logo192: `${folderPath}/PaperBolt%20LOGO.png`,
+      logo512: `${folderPath}/PaperBolt%20LOGO.png`,
       wordmark: {
-        white: `${folderPath}/StirlingPDFLogoWhiteText.svg`,
-        black: `${folderPath}/StirlingPDFLogoBlackText.svg`,
-        grey: `${folderPath}/StirlingPDFLogoGreyText.svg`,
+        white: `${folderPath}/PaperBoltLogoWhiteText.svg`,
+        black: `${folderPath}/PaperBoltLogoBlackText.svg`,
+        grey: `${folderPath}/PaperBoltLogoGreyText.svg`,
       },
       manifestHref: logoVariant === 'classic'
         ? `${BASE_PATH}/manifest-classic.json`

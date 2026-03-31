@@ -124,7 +124,7 @@ const LandingPage = () => {
           >
             <img
               src={logoPath}
-              alt="Stirling PDF Logo"
+              alt="PaperBolt Logo"
               style={{
                 height: 'auto',
                 pointerEvents: 'none',
@@ -151,7 +151,7 @@ const LandingPage = () => {
             <Group gap="xs" align="center">
               <img
                 src={colorScheme === 'dark' ? wordmark.white : wordmark.grey}
-                alt="Stirling PDF"
+                alt="PaperBolt"
                 style={{ height: '2.2rem', width: 'auto' }}
               />
             </Group>

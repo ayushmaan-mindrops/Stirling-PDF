@@ -156,6 +156,25 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
     const allTools: ToolRegistry = {
       // Proprietary tools (if any)
       ...proprietaryTools,
+      // PaperBolt v1 - Core Tools Only
+      // Commented out tools will be re-enabled in Phase 2
+      
+      // CORE TOOL 1: Merge
+      merge: {
+        icon: <LocalIcon icon="library-add-rounded" width="1.5rem" height="1.5rem" />,
+        name: t("home.merge.title", "Merge"),
+        component: Merge,
+        description: t("home.merge.desc", "Merge multiple PDFs into a single document"),
+        categoryId: ToolCategoryId.RECOMMENDED_TOOLS,
+        subcategoryId: SubcategoryId.GENERAL,
+        maxFiles: -1,
+        endpoints: ["merge-pdfs"],
+        operationConfig: mergeOperationConfig,
+        automationSettings: MergeSettings,
+        synonyms: getSynonyms(t, "merge")
+      },
+      
+      /* DISABLED FOR V1
       // Recommended Tools in order
       pdfTextEditor: {
         icon: <LocalIcon icon="edit-square-outline-rounded" width="1.5rem" height="1.5rem" />,
@@ -188,19 +207,7 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         supportsAutomate: false,
         automationSettings: null
       },
-      merge: {
-        icon: <LocalIcon icon="library-add-rounded" width="1.5rem" height="1.5rem" />,
-        name: t("home.merge.title", "Merge"),
-        component: Merge,
-        description: t("home.merge.desc", "Merge multiple PDFs into a single document"),
-        categoryId: ToolCategoryId.RECOMMENDED_TOOLS,
-        subcategoryId: SubcategoryId.GENERAL,
-        maxFiles: -1,
-        endpoints: ["merge-pdfs"],
-        operationConfig: mergeOperationConfig,
-        automationSettings: MergeSettings,
-        synonyms: getSynonyms(t, "merge")
-      },
+      
       // Signing
       certSign: {
         icon: <LocalIcon icon="workspace-premium-rounded" width="1.5rem" height="1.5rem" />,
@@ -280,10 +287,10 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         automationSettings: null,
         synonyms: getSynonyms(t, 'annotate'),
         supportsAutomate: false,
-      },
-
-      // Document Security
-
+      }
+      */ // END DISABLED FOR V1
+      
+      // CORE TOOL 2: AddPassword
       addPassword: {
         icon: <LocalIcon icon="password-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.addPassword.title", "Add Password"),
@@ -297,6 +304,7 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         automationSettings: AddPasswordSettings,
         synonyms: getSynonyms(t, "addPassword")
      },
+      /* DISABLED FOR V1
       watermark: {
         icon: <LocalIcon icon="branding-watermark-outline-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.watermark.title", "Add Watermark"),
@@ -461,9 +469,9 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         automationSettings: null,
         supportsAutomate: false,
         synonyms: getSynonyms(t, "editTableOfContents"),
-      },
-      // Page Formatting
-
+      }
+      */ // END DISABLED FOR V1
+      /* DISABLED FOR V1
       crop: {
         icon: <LocalIcon icon="crop-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.crop.title", "Crop PDF"),
@@ -475,7 +483,9 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         endpoints: ["crop"],
         operationConfig: cropOperationConfig,
         automationSettings: CropAutomationSettings,
-      },
+      }
+      */ // END DISABLED FOR V1
+      // CORE TOOL 3: Rotate
       rotate: {
         icon: <LocalIcon icon="rotate-right-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.rotate.title", "Rotate"),
@@ -489,6 +499,7 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         automationSettings: RotateAutomationSettings,
         synonyms: getSynonyms(t, "rotate")
       },
+      // CORE TOOL 4: Split
       split: {
         icon: <LocalIcon icon="content-cut-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.split.title", "Split"),
@@ -501,6 +512,7 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         automationSettings: SplitAutomationSettings,
         synonyms: getSynonyms(t, "split")
       },
+      /* DISABLED FOR V1
       reorganizePages: {
         icon: <LocalIcon icon="move-down-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.reorganizePages.title", "Reorganize Pages"),
@@ -529,7 +541,9 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         operationConfig: adjustPageScaleOperationConfig,
         automationSettings: AdjustPageScaleSettings,
         synonyms: getSynonyms(t, "scalePages")
-      },
+      }
+      */ // END DISABLED FOR V1
+      // CORE TOOL 5: Add Page Numbers
       addPageNumbers: {
         icon: <LocalIcon icon="123-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.addPageNumbers.title", "Add Page Numbers"),
@@ -543,6 +557,7 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         operationConfig: addPageNumbersOperationConfig,
         synonyms: getSynonyms(t, "addPageNumbers")
       },
+      /* DISABLED FOR V1
       pageLayout: {
         icon: <LocalIcon icon="dashboard-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.pageLayout.title", "Multi-Page Layout"),
@@ -676,7 +691,9 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         operationConfig: undefined,
         synonyms: getSynonyms(t, "removeImage"),
         automationSettings: null,
-      },
+      }
+      */ // END DISABLED FOR V1
+      // CORE TOOL 6: Remove Password (Unlock)
       removePassword: {
         icon: <LocalIcon icon="lock-open-right-outline-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.removePassword.title", "Remove Password"),
@@ -690,6 +707,8 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         automationSettings: RemovePasswordSettings,
         synonyms: getSynonyms(t, "removePassword")
       },
+      
+      /* DISABLED FOR V1
       removeCertSign: {
         icon: <LocalIcon icon="remove-moderator-outline-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.removeCertSign.title", "Remove Certificate Sign"),
@@ -896,7 +915,10 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         automationSettings: null,
         synonyms: getSynonyms(t, "compare"),
         supportsAutomate: false
-      },
+      }
+      */ // END DISABLED FOR V1
+      
+      // CORE TOOL 7: Compress
       compress: {
         icon: <LocalIcon icon="zoom-in-map-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.compress.title", "Compress"),
@@ -909,7 +931,9 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         operationConfig: compressOperationConfig,
         automationSettings: CompressSettings,
         synonyms: getSynonyms(t, "compress")
-      },
+      }
+      
+      /* DISABLED FOR V1
       convert: {
         icon: <LocalIcon icon="sync-alt-rounded" width="1.5rem" height="1.5rem" />,
         name: t("home.convert.title", "Convert"),
@@ -968,7 +992,8 @@ export function useTranslatedToolCatalog(): TranslatedToolCatalog {
         operationConfig: redactOperationConfig,
         automationSettings: RedactSingleStepSettings,
         synonyms: getSynonyms(t, "redact")
-      },
+      }
+      */ // END DISABLED FOR V1
     };
 
     const regularTools = {} as RegularToolRegistry;
