@@ -1,5 +1,7 @@
 package stirling.software.proprietary.service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
@@ -136,9 +138,9 @@ public class AzureMarketplaceService {
             if (existingSubscription.isPresent()) {
                 log.info("Subscription already exists: {}", subscriptionDetails.getSubscriptionId());
                 String redirectUrl = config.getAppBaseUrl()
-                        + "/login?subscription="
+                        + "/login?marketplace=1&subscription="
                         + subscriptionDetails.getSubscriptionId()
-                        + "&provider=azure&marketplace=1";
+                        + (purchaserEmail != null ? "&email=" + URLEncoder.encode(purchaserEmail, StandardCharsets.UTF_8) : "");
                 return MarketplaceProvisioningResult.builder()
                         .subscriptionId(subscriptionDetails.getSubscriptionId())
                         .tenantId(purchaserTenantId)
@@ -147,23 +149,13 @@ public class AzureMarketplaceService {
                         .build();
             }
 
-            // Find or create user by purchaser email
+            // Don't auto-create user - will be linked after user signs in
             User user = null;
             if (purchaserEmail != null && !purchaserEmail.isEmpty()) {
                 Optional<User> existingUser = userRepository.findByUsernameIgnoreCase(purchaserEmail);
                 if (existingUser.isPresent()) {
                     user = existingUser.get();
                     log.info("Found existing user for purchaser: {}", purchaserEmail);
-                } else {
-                    // Create a new user for the purchaser
-                    user = new User();
-                    user.setUsername(purchaserEmail);
-                    user.setEnabled(true);
-                    user.setAuthenticationType(stirling.software.proprietary.security.model.AuthenticationType.OAUTH2);
-                    user.setSsoProvider("azure");
-                    user.setSsoProviderId(purchaserObjectId);
-                    user = userRepository.save(user);
-                    log.info("Created new user for purchaser: {}", purchaserEmail);
                 }
             }
 
@@ -184,9 +176,9 @@ public class AzureMarketplaceService {
             log.info("Created marketplace subscription record: {}", subscription.getSubscriptionId());
 
             String redirectUrl = config.getAppBaseUrl()
-                    + "/login?subscription="
+                    + "/login?marketplace=1&subscription="
                     + subscriptionDetails.getSubscriptionId()
-                    + "&provider=azure&marketplace=1";
+                    + (purchaserEmail != null ? "&email=" + URLEncoder.encode(purchaserEmail, StandardCharsets.UTF_8) : "");
 
             return MarketplaceProvisioningResult.builder()
                     .subscriptionId(subscriptionDetails.getSubscriptionId())

@@ -23,7 +23,6 @@ export default function Login() {
   const navigate = useNavigate()
   const { session, loading, refreshSession } = useAuth()
   const { t } = useTranslation()
-  const autoProviderStarted = useRef(false)
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showMagicLink, setShowMagicLink] = useState(false)
@@ -31,13 +30,25 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [magicLinkEmail, setMagicLinkEmail] = useState('')
-  // Prefill email from query param (e.g. after password reset)
+  const [isMarketplace, setIsMarketplace] = useState(false)
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null)
+  
+  // Prefill email from query param and detect Marketplace context
   useEffect(() => {
     try {
       const url = new URL(window.location.href)
       const emailFromQuery = url.searchParams.get('email')
+      const marketplaceParam = url.searchParams.get('marketplace')
+      const subscriptionParam = url.searchParams.get('subscription')
+      
       if (emailFromQuery) {
         setEmail(emailFromQuery)
+      }
+      if (marketplaceParam === '1') {
+        setIsMarketplace(true)
+      }
+      if (subscriptionParam) {
+        setSubscriptionId(subscriptionParam)
       }
     } catch (_) {
       // ignore
@@ -67,7 +78,10 @@ export default function Login() {
       setError(null)
 
       const redirectTo = absoluteWithBasePath('/auth/callback')
-      sessionStorage.setItem('paperbolt_post_auth_redirect', `${window.location.pathname}${window.location.search}`)
+      // Store subscription ID for post-auth linking if present
+      if (subscriptionId) {
+        sessionStorage.setItem('paperbolt_marketplace_subscription', subscriptionId)
+      }
       console.log(`[Login] Signing in with ${provider}`)
 
       const oauthOptions: { redirectTo: string; queryParams?: Record<string, string> } = { redirectTo }
@@ -99,24 +113,6 @@ export default function Login() {
     }
   }
 
-  useEffect(() => {
-    if (loading || session || isSigningIn || autoProviderStarted.current) {
-      return
-    }
-
-    try {
-      const url = new URL(window.location.href)
-      const provider = url.searchParams.get('provider')
-      const isMarketplace = url.searchParams.get('marketplace') === '1'
-
-      if (provider === 'azure' && isMarketplace) {
-        autoProviderStarted.current = true
-        void signInWithProvider('azure')
-      }
-    } catch (_) {
-      autoProviderStarted.current = false
-    }
-  }, [loading, session, isSigningIn])
 
   const signInWithEmail = async () => {
     if (!email || !password) {
@@ -127,6 +123,11 @@ export default function Login() {
     try {
       setIsSigningIn(true)
       setError(null)
+
+      // Store subscription ID for post-auth linking if present
+      if (subscriptionId) {
+        sessionStorage.setItem('paperbolt_marketplace_subscription', subscriptionId)
+      }
 
       console.log('[Login] Signing in with email:', email)
 
@@ -218,6 +219,20 @@ export default function Login() {
   return (
     <AuthLayout isEmailFormExpanded={showEmailForm}>
       <LoginHeader title={t('login.login')} subtitle={t('login.subtitle', 'Sign back in to Stirling PDF')} />
+
+      {isMarketplace && (
+        <div style={{
+          padding: '12px 16px',
+          marginBottom: '16px',
+          backgroundColor: '#e3f2fd',
+          border: '1px solid #90caf9',
+          borderRadius: '8px',
+          color: '#1565c0'
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: '4px' }}>Azure Marketplace Purchase Received</div>
+          <div style={{ fontSize: '14px' }}>Sign in or create an account to activate your subscription.</div>
+        </div>
+      )}
 
       <ErrorMessage error={error} />
 

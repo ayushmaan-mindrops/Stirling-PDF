@@ -438,6 +438,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (newSession?.user) {
                 setLoading(true)
 
+                // Check for pending Marketplace subscription linking
+                const marketplaceSubscriptionId = sessionStorage.getItem('paperbolt_marketplace_subscription')
+                if (marketplaceSubscriptionId) {
+                  console.log('[Marketplace] Linking subscription after sign-in:', marketplaceSubscriptionId)
+                  apiClient.post('/api/v1/marketplace/link-subscription', null, {
+                    params: { subscriptionId: marketplaceSubscriptionId }
+                  })
+                    .then((response) => {
+                      console.log('[Marketplace] Subscription linked successfully:', response.data)
+                      sessionStorage.removeItem('paperbolt_marketplace_subscription')
+                    })
+                    .catch((error) => {
+                      console.error('[Marketplace] Failed to link subscription:', error)
+                      // Don't block user flow on linking failure
+                    })
+                }
+
                 // Sync OAuth avatar in background (don't block other fetches)
                 syncOAuthAvatar(newSession.user).catch((err) => {
                   console.debug('[Auth Debug] Failed to sync OAuth avatar:', err)
