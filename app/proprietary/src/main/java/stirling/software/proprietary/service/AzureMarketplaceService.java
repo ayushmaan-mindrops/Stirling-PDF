@@ -141,6 +141,7 @@ public class AzureMarketplaceService {
                         + "/login?marketplace=1&subscription="
                         + subscriptionDetails.getSubscriptionId()
                         + (purchaserEmail != null ? "&email=" + URLEncoder.encode(purchaserEmail, StandardCharsets.UTF_8) : "");
+                log.info("Marketplace redirect URL (existing): {}", redirectUrl);
                 return MarketplaceProvisioningResult.builder()
                         .subscriptionId(subscriptionDetails.getSubscriptionId())
                         .tenantId(purchaserTenantId)
@@ -179,6 +180,7 @@ public class AzureMarketplaceService {
                     + "/login?marketplace=1&subscription="
                     + subscriptionDetails.getSubscriptionId()
                     + (purchaserEmail != null ? "&email=" + URLEncoder.encode(purchaserEmail, StandardCharsets.UTF_8) : "");
+            log.info("Marketplace redirect URL (new): {}", redirectUrl);
 
             return MarketplaceProvisioningResult.builder()
                     .subscriptionId(subscriptionDetails.getSubscriptionId())

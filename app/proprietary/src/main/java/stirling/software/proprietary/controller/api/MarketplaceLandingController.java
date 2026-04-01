@@ -87,9 +87,16 @@ public class MarketplaceLandingController {
             log.info("Successfully activated Azure Marketplace subscription: {}",
                     subscriptionDetails.getSubscriptionId());
 
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(provisioningResult.getRedirectUrl()))
-                    .build();
+            // Return a simple HTML welcome page that redirects to login
+            // This avoids issues with ngrok interstitial pages breaking the SPA
+            String welcomeHtml = buildWelcomeHtml(
+                    provisioningResult.getRedirectUrl(),
+                    subscriptionDetails.getSubscriptionId(),
+                    subscriptionDetails.getPlanId());
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", "text/html; charset=UTF-8")
+                    .body(welcomeHtml);
             
         } catch (Exception e) {
             log.error("Failed to process Azure Marketplace landing: {}", e.getMessage(), e);
@@ -149,5 +156,150 @@ public class MarketplaceLandingController {
                 "message", "Failed to retrieve subscription details: " + e.getMessage()
             ));
         }
+    }
+
+    /**
+     * Build a simple HTML welcome page for Marketplace customers.
+     * This avoids issues with ngrok interstitial pages breaking the SPA routing.
+     */
+    private String buildWelcomeHtml(String redirectUrl, String subscriptionId, String planId) {
+        return """
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Welcome to PaperBolt - Azure Marketplace</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                        background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%);
+                        min-height: 100vh;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 20px;
+                    }
+                    .container {
+                        background: white;
+                        border-radius: 16px;
+                        padding: 48px;
+                        max-width: 480px;
+                        width: 100%%;
+                        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                        text-align: center;
+                    }
+                    .logo {
+                        font-size: 48px;
+                        margin-bottom: 16px;
+                    }
+                    h1 {
+                        color: #1a1a2e;
+                        font-size: 28px;
+                        font-weight: 700;
+                        margin-bottom: 12px;
+                    }
+                    .success-badge {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        background: #d1fae5;
+                        color: #065f46;
+                        padding: 8px 16px;
+                        border-radius: 9999px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        margin-bottom: 24px;
+                    }
+                    .success-badge::before {
+                        content: '✓';
+                        font-weight: bold;
+                    }
+                    p {
+                        color: #4a5568;
+                        font-size: 16px;
+                        line-height: 1.6;
+                        margin-bottom: 24px;
+                    }
+                    .details {
+                        background: #f7fafc;
+                        border-radius: 8px;
+                        padding: 16px;
+                        margin-bottom: 32px;
+                        text-align: left;
+                    }
+                    .details-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 8px 0;
+                        border-bottom: 1px solid #e2e8f0;
+                    }
+                    .details-row:last-child {
+                        border-bottom: none;
+                    }
+                    .details-label {
+                        color: #718096;
+                        font-size: 14px;
+                    }
+                    .details-value {
+                        color: #2d3748;
+                        font-size: 14px;
+                        font-weight: 600;
+                    }
+                    .cta-button {
+                        display: inline-block;
+                        background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%);
+                        color: white;
+                        padding: 16px 48px;
+                        border-radius: 12px;
+                        font-size: 18px;
+                        font-weight: 600;
+                        text-decoration: none;
+                        transition: transform 0.2s, box-shadow 0.2s;
+                        border: none;
+                        cursor: pointer;
+                    }
+                    .cta-button:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+                    }
+                    .footer {
+                        margin-top: 32px;
+                        color: #a0aec0;
+                        font-size: 13px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="logo">📄</div>
+                    <h1>Welcome to PaperBolt!</h1>
+                    <div class="success-badge">Subscription Activated</div>
+                    <p>Your Azure Marketplace purchase has been successfully processed. You now have access to PaperBolt's professional PDF tools.</p>
+                    <div class="details">
+                        <div class="details-row">
+                            <span class="details-label">Subscription ID</span>
+                            <span class="details-value">%s</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">Plan</span>
+                            <span class="details-value">%s</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">Status</span>
+                            <span class="details-value" style="color: #059669;">Active</span>
+                        </div>
+                    </div>
+                    <a href="%s" class="cta-button">Continue to PaperBolt →</a>
+                    <p class="footer">You'll be asked to sign in or create an account to access your subscription.</p>
+                </div>
+            </body>
+            </html>
+            """.formatted(
+                subscriptionId.substring(0, Math.min(8, subscriptionId.length())) + "...",
+                planId.substring(0, 1).toUpperCase() + planId.substring(1),
+                redirectUrl
+            );
     }
 }
