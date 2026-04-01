@@ -2,7 +2,7 @@ services:
   paperbolt:
     build:
       context: ../..
-      dockerfile: docker/embedded/Dockerfile
+      dockerfile: docker/embedded/Dockerfile.ultra-lite
     container_name: paperbolt
     restart: unless-stopped
     healthcheck:

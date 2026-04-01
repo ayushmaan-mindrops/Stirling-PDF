@@ -67,6 +67,7 @@ export default function Login() {
       setError(null)
 
       const redirectTo = absoluteWithBasePath('/auth/callback')
+      sessionStorage.setItem('paperbolt_post_auth_redirect', `${window.location.pathname}${window.location.search}`)
       console.log(`[Login] Signing in with ${provider}`)
 
       const oauthOptions: { redirectTo: string; queryParams?: Record<string, string> } = { redirectTo }

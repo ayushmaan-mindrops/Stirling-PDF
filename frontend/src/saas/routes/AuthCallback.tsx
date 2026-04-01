@@ -24,7 +24,8 @@ export default function AuthCallback() {
         const code = url.searchParams.get('code')
         const error = url.searchParams.get('error')
         const errorDescription = url.searchParams.get('error_description')
-        const next = url.searchParams.get('next') || '/'
+        const storedRedirect = sessionStorage.getItem('paperbolt_post_auth_redirect')
+        const next = url.searchParams.get('next') || storedRedirect || '/'
 
         console.log('[Auth Callback Debug] URL parameters:', {
           hasCode: !!code,
@@ -116,6 +117,7 @@ export default function AuthCallback() {
         // Redirect to the intended destination
         const destination = next.startsWith('/') ? next : '/'
         console.log('[Auth Callback Debug] Redirecting to:', destination)
+        sessionStorage.removeItem('paperbolt_post_auth_redirect')
 
         setTimeout(() => navigate(destination, { replace: true }), 1500)
 
