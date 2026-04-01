@@ -350,37 +350,19 @@ public class AzureMarketplaceService {
     }
 
     /**
-     * Determine the redirect URL based on whether the user needs to set up their account.
-     * If the user doesn't exist or doesn't have a password, redirect to the setup page.
-     * Otherwise, redirect to the login page.
+     * Build the redirect URL for marketplace users.
+     * Always redirects to /login with marketplace parameters - the frontend will check
+     * if the user needs to set up their account and show the appropriate UI.
      */
     private String determineRedirectUrl(String subscriptionId, String purchaserEmail) {
-        boolean needsSetup = true;
-        
-        if (purchaserEmail != null && !purchaserEmail.isEmpty()) {
-            Optional<User> existingUser = userRepository.findByUsernameIgnoreCase(purchaserEmail);
-            if (existingUser.isPresent()) {
-                User user = existingUser.get();
-                // User exists - check if they have a password set
-                needsSetup = user.getPassword() == null || user.getPassword().isEmpty();
-            }
-        }
-        
         String encodedEmail = purchaserEmail != null 
                 ? URLEncoder.encode(purchaserEmail, StandardCharsets.UTF_8) 
                 : "";
         
-        if (needsSetup && purchaserEmail != null) {
-            // Redirect to setup page for new users or users without password
-            return config.getAppBaseUrl()
-                    + "/marketplace/setup?subscription=" + subscriptionId
-                    + "&email=" + encodedEmail;
-        } else {
-            // Redirect to login page for existing users with password
-            return config.getAppBaseUrl()
-                    + "/login?marketplace=1&subscription=" + subscriptionId
-                    + (purchaserEmail != null ? "&email=" + encodedEmail : "");
-        }
+        // Always redirect to login page - frontend will handle setup flow if needed
+        return config.getAppBaseUrl()
+                + "/login?marketplace=1&subscription=" + subscriptionId
+                + (purchaserEmail != null ? "&email=" + encodedEmail : "");
     }
 
     private String getAccessToken() {

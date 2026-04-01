@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Text, Stack, Alert } from '@mantine/core';
+import { Text, Stack, Alert, PasswordInput, Button, Progress } from '@mantine/core';
 import { springAuth } from '@app/auth/springAuthClient';
 import { useAuth } from '@app/auth/UseSession';
 import { useAppConfig } from '@app/contexts/AppConfigContext';
@@ -44,6 +44,13 @@ export default function Login() {
   const backendProbe = useBackendProbe();
   const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false);
   const [showDefaultCredentials, setShowDefaultCredentials] = useState(false);
+  // Marketplace setup state
+  const [marketplaceNeedsSetup, setMarketplaceNeedsSetup] = useState(false);
+  const [isCheckingSetup, setIsCheckingSetup] = useState(false);
+  const [isSettingUpAccount, setIsSettingUpAccount] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [marketplacePlanId, setMarketplacePlanId] = useState('');
   const loginDisabled = backendProbe.loginDisabled === true || _enableLogin === false;
   const autoLoginAttempted = useRef(false);
   const autoLoginErrorRecorded = useRef(false);
@@ -345,6 +352,110 @@ export default function Login() {
     }
   }, [searchParams, t, errorFromState, errorFromQuery, hasSsoLoginError]);
 
+  // Check if marketplace user needs to set up their account (create password)
+  useEffect(() => {
+    const checkMarketplaceSetup = async () => {
+      const subscriptionId = searchParams.get('subscription');
+      const emailParam = searchParams.get('email');
+      const isMarketplace = searchParams.get('marketplace') === '1';
+
+      if (!isMarketplace || !subscriptionId || !emailParam) {
+        return;
+      }
+
+      setIsCheckingSetup(true);
+      try {
+        const response = await apiClient.get('/api/v1/marketplace/setup-status', {
+          params: { subscriptionId, email: emailParam }
+        });
+
+        const data = response.data;
+        if (data.needsSetup) {
+          setMarketplaceNeedsSetup(true);
+          setMarketplacePlanId(data.planId || 'basic');
+          setEmail(emailParam);
+        }
+      } catch (err) {
+        console.error('[Login] Failed to check marketplace setup status:', err);
+        // Don't show error - just proceed with normal login flow
+      } finally {
+        setIsCheckingSetup(false);
+      }
+    };
+
+    if (backendProbe.status === 'up' || searchParams.get('marketplace') === '1') {
+      checkMarketplaceSetup();
+    }
+  }, [searchParams, backendProbe.status]);
+
+  // Handle marketplace account setup (password creation)
+  const handleMarketplaceSetup = useCallback(async () => {
+    const subscriptionId = searchParams.get('subscription');
+    
+    if (!subscriptionId || !email) {
+      setError(t('marketplace.missingParams', 'Missing subscription or email information.'));
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setError(t('marketplace.passwordTooShort', 'Password must be at least 8 characters'));
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError(t('marketplace.passwordMismatch', 'Passwords do not match'));
+      return;
+    }
+
+    setIsSettingUpAccount(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.post('/api/v1/marketplace/setup-account', {
+        subscriptionId,
+        email,
+        password: newPassword
+      });
+
+      if (response.data.status === 'success') {
+        // Reset setup state and show success message
+        setMarketplaceNeedsSetup(false);
+        setNewPassword('');
+        setConfirmPassword('');
+        setSuccessMessage(t('login.accountCreatedSuccess', 'Account created successfully! You can now sign in.'));
+        // Pre-fill password for convenience
+        setPassword(newPassword);
+      } else {
+        setError(response.data.message || t('marketplace.setupFailed', 'Failed to create account'));
+      }
+    } catch (err: unknown) {
+      console.error('[Login] Failed to setup marketplace account:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create account';
+      setError(errorMessage);
+    } finally {
+      setIsSettingUpAccount(false);
+    }
+  }, [searchParams, email, newPassword, confirmPassword, t]);
+
+  // Password strength helper
+  const getPasswordStrength = (pwd: string): number => {
+    let strength = 0;
+    if (pwd.length >= 8) strength += 25;
+    if (pwd.length >= 12) strength += 15;
+    if (/[a-z]/.test(pwd)) strength += 15;
+    if (/[A-Z]/.test(pwd)) strength += 15;
+    if (/[0-9]/.test(pwd)) strength += 15;
+    if (/[^a-zA-Z0-9]/.test(pwd)) strength += 15;
+    return Math.min(100, strength);
+  };
+
+  const getStrengthColor = (strength: number): string => {
+    if (strength < 30) return 'red';
+    if (strength < 60) return 'orange';
+    if (strength < 80) return 'yellow';
+    return 'green';
+  };
+
   const baseUrl = window.location.origin + BASE_PATH;
 
   // Set document meta
@@ -468,6 +579,168 @@ export default function Login() {
   //   navigate('/auth/reset');
   // };
 
+  // Show loading state while checking marketplace setup
+  if (isCheckingSetup) {
+    return (
+      <AuthLayout>
+        <LoginHeader title={t('marketplace.verifying', 'Verifying subscription...')} />
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          <Text size="sm" c="dimmed">
+            {t('marketplace.pleaseWait', 'Please wait while we verify your subscription...')}
+          </Text>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  // Show password creation form for marketplace users who need to set up their account
+  if (marketplaceNeedsSetup) {
+    const passwordStrength = getPasswordStrength(newPassword);
+    const strengthColor = getStrengthColor(passwordStrength);
+
+    return (
+      <AuthLayout>
+        <LoginHeader 
+          title={t('marketplace.createPassword', 'Create Your Password')} 
+          subtitle={t('marketplace.setupSubtitle', 'Set up your account to access your Azure Marketplace subscription')}
+        />
+
+        {/* Subscription info banner */}
+        <div style={{
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          border: '1px solid rgba(102, 126, 234, 0.3)',
+          borderRadius: '0.5rem',
+        }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: '#4c51bf', fontWeight: 600 }}>
+            🎉 {t('marketplace.subscriptionActivated', 'Azure Marketplace Subscription Activated!')}
+          </p>
+          <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', color: '#667eea' }}>
+            {t('marketplace.planInfo', 'Plan: {{plan}}', { plan: marketplacePlanId.charAt(0).toUpperCase() + marketplacePlanId.slice(1) })}
+          </p>
+        </div>
+
+        <ErrorMessage error={error} />
+
+        <form onSubmit={(e) => { e.preventDefault(); handleMarketplaceSetup(); }}>
+          <div className="auth-fields">
+            {/* Email display (read-only) */}
+            <div className="auth-field">
+              <label className="auth-label">{t('login.email', 'Email')}</label>
+              <div style={{
+                padding: '0.625rem 0.75rem',
+                backgroundColor: 'var(--auth-input-bg-light-only, #f8fafc)',
+                border: '1px solid var(--auth-input-border-light-only, #e2e8f0)',
+                borderRadius: '0.625rem',
+                fontSize: '0.875rem',
+                color: 'var(--auth-input-text-light-only, #1e293b)',
+                opacity: 0.8
+              }}>
+                {email}
+              </div>
+            </div>
+
+            {/* Password field */}
+            <div className="auth-field">
+              <PasswordInput
+                id="newPassword"
+                label={t('marketplace.newPassword', 'New Password')}
+                name="new-password"
+                autoComplete="new-password"
+                placeholder={t('marketplace.enterPassword', 'Enter your password')}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                styles={{
+                  input: {
+                    backgroundColor: 'var(--auth-input-bg-light-only, #f8fafc)',
+                    color: 'var(--auth-input-text-light-only, #1e293b)',
+                    borderColor: 'var(--auth-input-border-light-only, #e2e8f0)',
+                  },
+                  label: {
+                    color: 'var(--auth-label-text-light-only, #475569)',
+                  },
+                }}
+                autoFocus
+              />
+              {newPassword && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <Progress 
+                    value={passwordStrength} 
+                    color={strengthColor}
+                    size="xs"
+                    radius="xl"
+                  />
+                  <Text size="xs" c="dimmed" mt={4}>
+                    {passwordStrength < 30 && t('marketplace.passwordWeak', 'Weak password')}
+                    {passwordStrength >= 30 && passwordStrength < 60 && t('marketplace.passwordFair', 'Fair password')}
+                    {passwordStrength >= 60 && passwordStrength < 80 && t('marketplace.passwordGood', 'Good password')}
+                    {passwordStrength >= 80 && t('marketplace.passwordStrong', 'Strong password')}
+                  </Text>
+                </div>
+              )}
+            </div>
+
+            {/* Confirm password field */}
+            <div className="auth-field">
+              <PasswordInput
+                id="confirmPassword"
+                label={t('marketplace.confirmPassword', 'Confirm Password')}
+                name="confirm-password"
+                autoComplete="new-password"
+                placeholder={t('marketplace.confirmPasswordPlaceholder', 'Confirm your password')}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                error={confirmPassword && newPassword !== confirmPassword ? t('marketplace.passwordMismatch', 'Passwords do not match') : undefined}
+                styles={{
+                  input: {
+                    backgroundColor: 'var(--auth-input-bg-light-only, #f8fafc)',
+                    color: 'var(--auth-input-text-light-only, #1e293b)',
+                    borderColor: 'var(--auth-input-border-light-only, #e2e8f0)',
+                  },
+                  label: {
+                    color: 'var(--auth-label-text-light-only, #475569)',
+                  },
+                }}
+              />
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            disabled={isSettingUpAccount || !newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 8}
+            className="auth-button auth-cta-button"
+            fullWidth
+            loading={isSettingUpAccount}
+            style={{ marginTop: '1.5rem' }}
+          >
+            {isSettingUpAccount 
+              ? t('marketplace.creatingAccount', 'Creating account...') 
+              : t('marketplace.createAccount', 'Create Account & Continue')}
+          </Button>
+        </form>
+
+        {/* Already have an account link */}
+        <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setMarketplaceNeedsSetup(false)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#667eea',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              textDecoration: 'underline'
+            }}
+          >
+            {t('marketplace.alreadyHaveAccount', 'Already have an account? Sign in')}
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout>
       <LoginHeader
@@ -476,7 +749,7 @@ export default function Login() {
       />
 
       {/* Marketplace welcome banner */}
-      {isMarketplaceRedirect && (
+      {isMarketplaceRedirect && !marketplaceNeedsSetup && (
         <div style={{
           padding: '1rem',
           marginBottom: '1rem',
@@ -488,7 +761,7 @@ export default function Login() {
             🎉 Azure Marketplace Purchase Complete!
           </p>
           <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', textAlign: 'center', color: '#667eea' }}>
-            Sign in or create an account to activate your subscription.
+            Sign in to activate your subscription.
           </p>
         </div>
       )}
