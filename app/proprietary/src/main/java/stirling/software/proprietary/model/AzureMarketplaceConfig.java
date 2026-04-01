@@ -26,10 +26,4 @@ public class AzureMarketplaceConfig {
     private String webhookSecret;
     
     private String appBaseUrl;
-    
-    private String planId;
-    
-    private int quantity = 1;
-    
-    private String accessToken;
 }

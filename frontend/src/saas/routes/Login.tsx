@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, signInAnonymously } from '@app/auth/supabase'
 import { useAuth } from '@app/auth/UseSession'
@@ -23,6 +23,7 @@ export default function Login() {
   const navigate = useNavigate()
   const { session, loading, refreshSession } = useAuth()
   const { t } = useTranslation()
+  const autoProviderStarted = useRef(false)
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showMagicLink, setShowMagicLink] = useState(false)
@@ -96,6 +97,25 @@ export default function Login() {
       setIsSigningIn(false)
     }
   }
+
+  useEffect(() => {
+    if (loading || session || isSigningIn || autoProviderStarted.current) {
+      return
+    }
+
+    try {
+      const url = new URL(window.location.href)
+      const provider = url.searchParams.get('provider')
+      const isMarketplace = url.searchParams.get('marketplace') === '1'
+
+      if (provider === 'azure' && isMarketplace) {
+        autoProviderStarted.current = true
+        void signInWithProvider('azure')
+      }
+    } catch (_) {
+      autoProviderStarted.current = false
+    }
+  }, [loading, session, isSigningIn])
 
   const signInWithEmail = async () => {
     if (!email || !password) {

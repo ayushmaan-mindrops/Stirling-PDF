@@ -1,8 +1,10 @@
 package stirling.software.proprietary.controller.api;
 
+import java.net.URI;
 import java.util.Map;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,7 +60,7 @@ public class MarketplaceLandingController {
         summary = "Azure Marketplace Landing Page",
         description = "Handles the redirect from Azure Marketplace after a customer purchases the SaaS offer"
     )
-    public ResponseEntity<Map<String, Object>> handleLanding(
+    public ResponseEntity<?> handleLanding(
             @Parameter(description = "Marketplace purchase identification token")
             @RequestParam("token") String token) {
         
@@ -76,18 +78,18 @@ public class MarketplaceLandingController {
             // Provision the user/tenant based on subscription details
             var provisioningResult = marketplaceService.provisionSubscription(subscriptionDetails);
             
-            // Activate the subscription with Azure
-            marketplaceService.activateSubscription(subscriptionDetails.getSubscriptionId());
+            // Activate the subscription with Azure using resolved planId and quantity
+            marketplaceService.activateSubscription(
+                    subscriptionDetails.getSubscriptionId(),
+                    subscriptionDetails.getPlanId(),
+                    subscriptionDetails.getQuantity());
             
             log.info("Successfully activated Azure Marketplace subscription: {}",
                     subscriptionDetails.getSubscriptionId());
-            
-            return ResponseEntity.ok(Map.of(
-                "status", "success",
-                "message", "Subscription activated successfully",
-                "subscriptionId", subscriptionDetails.getSubscriptionId(),
-                "redirectUrl", provisioningResult.getRedirectUrl()
-            ));
+
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(provisioningResult.getRedirectUrl()))
+                    .build();
             
         } catch (Exception e) {
             log.error("Failed to process Azure Marketplace landing: {}", e.getMessage(), e);

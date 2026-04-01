@@ -11,6 +11,8 @@ import Login from '@app/routes/Login';
 import Signup from '@app/routes/Signup';
 import AuthCallback from '@app/routes/AuthCallback';
 import ResetPassword from '@app/routes/ResetPassword';
+import PrivacyPolicy from '@app/routes/PrivacyPolicy';
+import Support from '@app/routes/Support';
 import OnboardingBootstrap from '@app/components/OnboardingBootstrap';
 import TrialExpiredBootstrap from '@app/components/TrialExpiredBootstrap';
 
@@ -39,6 +41,8 @@ export default function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/reset" element={<ResetPassword />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/support" element={<Support />} />
             <Route path="/*" element={<Landing />} />
           </Routes>
           <OnboardingTour />

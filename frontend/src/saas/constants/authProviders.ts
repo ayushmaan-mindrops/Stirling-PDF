@@ -10,4 +10,5 @@ export type OAuthProviderMeta = {
 export const oauthProviders: readonly OAuthProviderMeta[] = [
   { id: 'google', label: 'Google', file: 'google.svg', isDisabled: false },
   { id: 'github', label: 'GitHub', file: 'github.svg', isDisabled: false },
+  { id: 'azure', label: 'Microsoft', file: 'microsoft.svg', isDisabled: false },
 ] as const

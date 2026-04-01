@@ -165,11 +165,17 @@ public class RequestUriUtils {
                 || trimmedUri.startsWith("/api/v1/auth/login")
                 || trimmedUri.startsWith("/api/v1/auth/refresh")
                 || trimmedUri.startsWith("/api/v1/auth/logout")
+                || trimmedUri.startsWith("/api/v1/config/app-config")
+                || trimmedUri.startsWith("/api/v1/config/endpoints-availability")
+                || trimmedUri.startsWith("/api/v1/config/public-config")
+                || trimmedUri.startsWith("/api/v1/config/endpoints-enabled")
                 || trimmedUri.startsWith(
                         "/api/v1/proprietary/ui-data/login") // Login page config (SSO providers +
                 // enableLogin)
                 || trimmedUri.startsWith(
                         "/api/v1/ui-data/footer-info") // Public footer configuration
+                || trimmedUri.startsWith(
+                        "/api/v1/marketplace/") // Azure Marketplace landing/webhook endpoints
                 || trimmedUri.startsWith("/api/v1/invite/validate")
                 || trimmedUri.startsWith("/api/v1/invite/accept")
                 // Health Endoints
