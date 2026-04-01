@@ -10,6 +10,7 @@ import Login from "@app/routes/Login";
 import Signup from "@app/routes/Signup";
 import AuthCallback from "@app/routes/AuthCallback";
 import InviteAccept from "@app/routes/InviteAccept";
+import MarketplaceSetup from "@app/routes/MarketplaceSetup";
 import ShareLinkPage from "@app/routes/ShareLinkPage";
 import ParticipantView from "@app/components/workflow/ParticipantView";
 import MobileScannerPage from "@app/pages/MobileScannerPage";
@@ -76,6 +77,7 @@ export default function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/marketplace/setup" element={<MarketplaceSetup />} />
                   <Route path="/invite/:token" element={<InviteAccept />} />
                   <Route path="/share/:token" element={<ShareLinkPage />} />
                   {/* Main app routes - Landing handles auth logic */}

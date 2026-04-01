@@ -137,10 +137,10 @@ public class AzureMarketplaceService {
             
             if (existingSubscription.isPresent()) {
                 log.info("Subscription already exists: {}", subscriptionDetails.getSubscriptionId());
-                String redirectUrl = config.getAppBaseUrl()
-                        + "/login?marketplace=1&subscription="
-                        + subscriptionDetails.getSubscriptionId()
-                        + (purchaserEmail != null ? "&email=" + URLEncoder.encode(purchaserEmail, StandardCharsets.UTF_8) : "");
+                // Check if user exists and has a password - if not, redirect to setup
+                String redirectUrl = determineRedirectUrl(
+                        subscriptionDetails.getSubscriptionId(), 
+                        purchaserEmail);
                 log.info("Marketplace redirect URL (existing): {}", redirectUrl);
                 return MarketplaceProvisioningResult.builder()
                         .subscriptionId(subscriptionDetails.getSubscriptionId())
@@ -150,13 +150,16 @@ public class AzureMarketplaceService {
                         .build();
             }
 
-            // Don't auto-create user - will be linked after user signs in
+            // Don't auto-create user - will be linked after user signs in or sets up account
             User user = null;
+            boolean needsSetup = true;
             if (purchaserEmail != null && !purchaserEmail.isEmpty()) {
                 Optional<User> existingUser = userRepository.findByUsernameIgnoreCase(purchaserEmail);
                 if (existingUser.isPresent()) {
                     user = existingUser.get();
-                    log.info("Found existing user for purchaser: {}", purchaserEmail);
+                    // Check if user has a password set
+                    needsSetup = user.getPassword() == null || user.getPassword().isEmpty();
+                    log.info("Found existing user for purchaser: {}, needsSetup: {}", purchaserEmail, needsSetup);
                 }
             }
 
@@ -176,10 +179,10 @@ public class AzureMarketplaceService {
             subscriptionRepository.save(subscription);
             log.info("Created marketplace subscription record: {}", subscription.getSubscriptionId());
 
-            String redirectUrl = config.getAppBaseUrl()
-                    + "/login?marketplace=1&subscription="
-                    + subscriptionDetails.getSubscriptionId()
-                    + (purchaserEmail != null ? "&email=" + URLEncoder.encode(purchaserEmail, StandardCharsets.UTF_8) : "");
+            // Determine redirect URL based on whether user needs to set up their account
+            String redirectUrl = determineRedirectUrl(
+                    subscriptionDetails.getSubscriptionId(), 
+                    purchaserEmail);
             log.info("Marketplace redirect URL (new): {}", redirectUrl);
 
             return MarketplaceProvisioningResult.builder()
@@ -344,6 +347,40 @@ public class AzureMarketplaceService {
             subscriptionRepository.save(subscription);
             log.info("Updated local status for subscription {}: {}", subscriptionId, status);
         });
+    }
+
+    /**
+     * Determine the redirect URL based on whether the user needs to set up their account.
+     * If the user doesn't exist or doesn't have a password, redirect to the setup page.
+     * Otherwise, redirect to the login page.
+     */
+    private String determineRedirectUrl(String subscriptionId, String purchaserEmail) {
+        boolean needsSetup = true;
+        
+        if (purchaserEmail != null && !purchaserEmail.isEmpty()) {
+            Optional<User> existingUser = userRepository.findByUsernameIgnoreCase(purchaserEmail);
+            if (existingUser.isPresent()) {
+                User user = existingUser.get();
+                // User exists - check if they have a password set
+                needsSetup = user.getPassword() == null || user.getPassword().isEmpty();
+            }
+        }
+        
+        String encodedEmail = purchaserEmail != null 
+                ? URLEncoder.encode(purchaserEmail, StandardCharsets.UTF_8) 
+                : "";
+        
+        if (needsSetup && purchaserEmail != null) {
+            // Redirect to setup page for new users or users without password
+            return config.getAppBaseUrl()
+                    + "/marketplace/setup?subscription=" + subscriptionId
+                    + "&email=" + encodedEmail;
+        } else {
+            // Redirect to login page for existing users with password
+            return config.getAppBaseUrl()
+                    + "/login?marketplace=1&subscription=" + subscriptionId
+                    + (purchaserEmail != null ? "&email=" + encodedEmail : "");
+        }
     }
 
     private String getAccessToken() {

@@ -367,8 +367,13 @@ export default function Login() {
     return <LoggedInState />;
   }
 
+  // Check if this is a Marketplace redirect - if so, skip the backend probe check
+  // since we know the backend is up (the welcome page just loaded from it)
+  const isMarketplaceRedirect = searchParams.get('marketplace') === '1';
+
   // If backend isn't ready yet, show a lightweight status screen instead of the form
-  if (backendProbe.status !== 'up' && !loginDisabled) {
+  // Skip this check for Marketplace redirects since we know backend is up
+  if (backendProbe.status !== 'up' && !loginDisabled && !isMarketplaceRedirect) {
     const backendTitle = t('backendStartup.notFoundTitle', 'Backend not found');
     const handleRetry = async () => {
       const result = await backendProbe.probe();
@@ -422,6 +427,12 @@ export default function Login() {
       setError(null);
       clearLogoutBlock();
 
+      // Store subscription ID for post-auth linking if this is a Marketplace redirect
+      const subscriptionId = searchParams.get('subscription');
+      if (subscriptionId) {
+        sessionStorage.setItem('paperbolt_marketplace_subscription', subscriptionId);
+      }
+
       console.log('[Login] Signing in with email:', email);
 
       const { user, session, error } = await springAuth.signInWithPassword({
@@ -463,6 +474,24 @@ export default function Login() {
         title={isSingleSsoOnly ? '' : (t('login.login') || 'Sign in')}
         centerOnly={isSingleSsoOnly}
       />
+
+      {/* Marketplace welcome banner */}
+      {isMarketplaceRedirect && (
+        <div style={{
+          padding: '1rem',
+          marginBottom: '1rem',
+          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          border: '1px solid rgba(102, 126, 234, 0.3)',
+          borderRadius: '0.5rem',
+        }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', textAlign: 'center', color: '#4c51bf', fontWeight: 600 }}>
+            🎉 Azure Marketplace Purchase Complete!
+          </p>
+          <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', textAlign: 'center', color: '#667eea' }}>
+            Sign in or create an account to activate your subscription.
+          </p>
+        </div>
+      )}
 
       {/* Success message */}
       {successMessage && (

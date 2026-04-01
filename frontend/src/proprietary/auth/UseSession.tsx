@@ -189,6 +189,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.log(`[Auth:${mountId}] ✓ User signed out, session cleared`);
             } else if (event === 'SIGNED_IN') {
               console.log(`[Auth:${mountId}] ✓ User signed in successfully`);
+              
+              // Check for pending Marketplace subscription linking
+              const marketplaceSubscriptionId = sessionStorage.getItem('paperbolt_marketplace_subscription');
+              if (marketplaceSubscriptionId) {
+                console.log('[Marketplace] Linking subscription after sign-in:', marketplaceSubscriptionId);
+                fetch(`/api/v1/marketplace/link-subscription?subscriptionId=${encodeURIComponent(marketplaceSubscriptionId)}`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                })
+                  .then((response) => response.json())
+                  .then((data) => {
+                    console.log('[Marketplace] Subscription linked successfully:', data);
+                    sessionStorage.removeItem('paperbolt_marketplace_subscription');
+                  })
+                  .catch((error) => {
+                    console.error('[Marketplace] Failed to link subscription:', error);
+                    // Don't block user flow on linking failure
+                  });
+              }
             } else if (event === 'TOKEN_REFRESHED') {
               console.log(`[Auth:${mountId}] ✓ Token refreshed`);
             } else if (event === 'USER_UPDATED') {

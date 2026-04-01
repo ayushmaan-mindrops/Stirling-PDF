@@ -175,7 +175,7 @@ public class RequestUriUtils {
                 || trimmedUri.startsWith(
                         "/api/v1/ui-data/footer-info") // Public footer configuration
                 || trimmedUri.startsWith(
-                        "/api/v1/marketplace/") // Azure Marketplace landing/webhook endpoints
+                        "/api/v1/marketplace/") // Azure Marketplace landing/webhook/setup endpoints
                 || trimmedUri.startsWith("/api/v1/invite/validate")
                 || trimmedUri.startsWith("/api/v1/invite/accept")
                 // Health Endoints

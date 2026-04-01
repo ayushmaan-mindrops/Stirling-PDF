@@ -2,10 +2,14 @@ package stirling.software.proprietary.controller.api;
 
 import java.security.Principal;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,6 +25,7 @@ import stirling.software.proprietary.model.MarketplaceSubscription;
 import stirling.software.proprietary.model.MarketplaceSubscription.SubscriptionStatus;
 import stirling.software.proprietary.repository.MarketplaceSubscriptionRepository;
 import stirling.software.proprietary.security.database.repository.UserRepository;
+import stirling.software.proprietary.security.model.AuthenticationType;
 import stirling.software.proprietary.security.model.User;
 
 /**
@@ -36,6 +41,7 @@ public class MarketplaceSubscriptionController {
 
     private final MarketplaceSubscriptionRepository subscriptionRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Link a Marketplace subscription to the currently authenticated user.
@@ -112,4 +118,154 @@ public class MarketplaceSubscriptionController {
             ));
         }
     }
+
+    /**
+     * Check if a Marketplace user needs to set up their account (create password).
+     * This is a public endpoint - no authentication required.
+     */
+    @GetMapping("/setup-status")
+    @Operation(
+        summary = "Check Setup Status",
+        description = "Check if a Marketplace user needs to create their account password"
+    )
+    public ResponseEntity<?> checkSetupStatus(
+            @Parameter(description = "Marketplace subscription ID")
+            @RequestParam("subscriptionId") String subscriptionId,
+            @Parameter(description = "User email address")
+            @RequestParam("email") String email) {
+        
+        log.info("Checking setup status for subscription {} and email {}", subscriptionId, email);
+        
+        try {
+            // Find the subscription
+            Optional<MarketplaceSubscription> subscriptionOpt = subscriptionRepository.findBySubscriptionId(subscriptionId);
+            
+            if (subscriptionOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "Subscription not found"
+                ));
+            }
+            
+            MarketplaceSubscription subscription = subscriptionOpt.get();
+            
+            // Verify email matches the purchaser
+            if (subscription.getPurchaserEmail() == null || 
+                !email.equalsIgnoreCase(subscription.getPurchaserEmail())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "Email does not match subscription purchaser"
+                ));
+            }
+            
+            // Check if user already exists with a password
+            Optional<User> existingUser = userRepository.findByUsernameIgnoreCase(email);
+            boolean needsSetup = existingUser.isEmpty() || 
+                    existingUser.get().getPassword() == null || 
+                    existingUser.get().getPassword().isEmpty();
+            
+            return ResponseEntity.ok(Map.of(
+                "needsSetup", needsSetup,
+                "email", email,
+                "planId", subscription.getPlanId() != null ? subscription.getPlanId() : "basic"
+            ));
+            
+        } catch (Exception e) {
+            log.error("Failed to check setup status: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "error",
+                "message", "Failed to check setup status: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Set up account for a Marketplace user (create password and link subscription).
+     * This is a public endpoint - no authentication required.
+     */
+    @PostMapping("/setup-account")
+    @Operation(
+        summary = "Setup Account",
+        description = "Create account with password for a Marketplace user and link their subscription"
+    )
+    public ResponseEntity<?> setupAccount(@RequestBody SetupAccountRequest request) {
+        
+        log.info("Setting up account for subscription {} and email {}", 
+                request.subscriptionId(), request.email());
+        
+        try {
+            // Validate request
+            if (request.password() == null || request.password().length() < 8) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "Password must be at least 8 characters"
+                ));
+            }
+            
+            // Find the subscription
+            Optional<MarketplaceSubscription> subscriptionOpt = subscriptionRepository
+                    .findBySubscriptionId(request.subscriptionId());
+            
+            if (subscriptionOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "Subscription not found"
+                ));
+            }
+            
+            MarketplaceSubscription subscription = subscriptionOpt.get();
+            
+            // Verify email matches the purchaser
+            if (subscription.getPurchaserEmail() == null || 
+                !request.email().equalsIgnoreCase(subscription.getPurchaserEmail())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "Email does not match subscription purchaser"
+                ));
+            }
+            
+            // Create or update user
+            User user = userRepository.findByUsernameIgnoreCase(request.email())
+                    .orElseGet(() -> {
+                        User newUser = new User();
+                        newUser.setUsername(request.email());
+                        newUser.setEnabled(true);
+                        return newUser;
+                    });
+            
+            // Set password and authentication type
+            user.setPassword(passwordEncoder.encode(request.password()));
+            user.setAuthenticationType(AuthenticationType.WEB);
+            user = userRepository.save(user);
+            
+            log.info("Created/updated user account for: {}", request.email());
+            
+            // Link subscription to user and activate
+            subscription.setUser(user);
+            subscription.setStatus(SubscriptionStatus.ACTIVE);
+            subscriptionRepository.save(subscription);
+            
+            log.info("Successfully set up account and linked subscription {} to user {}", 
+                    request.subscriptionId(), request.email());
+            
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Account created successfully. You can now sign in.",
+                "email", request.email(),
+                "planId", subscription.getPlanId() != null ? subscription.getPlanId() : "basic"
+            ));
+            
+        } catch (Exception e) {
+            log.error("Failed to setup account: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "error",
+                "message", "Failed to setup account: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * DTO for account setup request.
+     */
+    record SetupAccountRequest(String subscriptionId, String email, String password) {}
 }
