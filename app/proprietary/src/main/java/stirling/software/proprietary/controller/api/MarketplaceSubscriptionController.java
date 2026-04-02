@@ -241,6 +241,12 @@ public class MarketplaceSubscriptionController {
                 ));
             }
 
+            // If the subscription record is missing purchaserEmail, capture it from the setup request.
+            // This makes the subscription-to-user email mapping consistent for subsequent setup-status calls.
+            if (subscription.getPurchaserEmail() == null || subscription.getPurchaserEmail().isBlank()) {
+                subscription.setPurchaserEmail(effectiveEmail);
+            }
+
             // When both are present, verify they match
             if (request.email() != null && !request.email().isBlank()
                     && subscription.getPurchaserEmail() != null

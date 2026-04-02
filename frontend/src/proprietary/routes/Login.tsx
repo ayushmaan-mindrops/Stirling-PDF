@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Text, Stack, Alert, PasswordInput, Button, Progress } from '@mantine/core';
+import { Text, Stack, Alert, PasswordInput, Button, Progress, TextInput } from '@mantine/core';
 import { springAuth } from '@app/auth/springAuthClient';
 import { useAuth } from '@app/auth/UseSession';
 import { useAppConfig } from '@app/contexts/AppConfigContext';
@@ -404,6 +404,11 @@ export default function Login() {
       return;
     }
 
+    if (!email || !email.trim()) {
+      setError(t('marketplace.missingEmail', 'Please enter your email.'));
+      return;
+    }
+
     if (newPassword.length < 8) {
       setError(t('marketplace.passwordTooShort', 'Password must be at least 8 characters'));
       return;
@@ -421,7 +426,7 @@ export default function Login() {
       const response = await apiClient.post('/api/v1/marketplace/setup-account', {
         subscriptionId,
         // Email can be omitted if backend resolves it from the subscription record.
-        email: email || undefined,
+        email: email.trim(),
         password: newPassword
       });
 
@@ -637,20 +642,23 @@ export default function Login() {
 
         <form onSubmit={(e) => { e.preventDefault(); handleMarketplaceSetup(); }}>
           <div className="auth-fields">
-            {/* Email display (read-only) */}
+            {/* Email (editable fallback) */}
             <div className="auth-field">
               <label className="auth-label">{t('login.email', 'Email')}</label>
-              <div style={{
-                padding: '0.625rem 0.75rem',
-                backgroundColor: 'var(--auth-input-bg-light-only, #f8fafc)',
-                border: '1px solid var(--auth-input-border-light-only, #e2e8f0)',
-                borderRadius: '0.625rem',
-                fontSize: '0.875rem',
-                color: 'var(--auth-input-text-light-only, #1e293b)',
-                opacity: 0.8
-              }}>
-                {email}
-              </div>
+              <TextInput
+                value={email}
+                onChange={(e) => setEmail(e.currentTarget.value)}
+                placeholder={t('marketplace.enterEmail', 'Enter your email')}
+                inputMode="email"
+                autoComplete="email"
+                styles={{
+                  input: {
+                    backgroundColor: 'var(--auth-input-bg-light-only, #f8fafc)',
+                    color: 'var(--auth-input-text-light-only, #1e293b)',
+                    borderColor: 'var(--auth-input-border-light-only, #e2e8f0)'
+                  },
+                }}
+              />
             </div>
 
             {/* Password field */}
@@ -720,7 +728,7 @@ export default function Login() {
 
           <Button
             type="submit"
-            disabled={isSettingUpAccount || !newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 8}
+            disabled={isSettingUpAccount || !email?.trim() || !newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 8}
             className="auth-button auth-cta-button"
             fullWidth
             loading={isSettingUpAccount}
