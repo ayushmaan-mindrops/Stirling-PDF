@@ -25,6 +25,10 @@ public class AzureMarketplaceConfig {
     
     private String webhookSecret;
     
-    /** Public URL of the SPA (scheme + host + optional subpath). Used for Marketplace "Continue" links; must match how users load the frontend (no trailing slash required). */
+    /**
+     * Public URL of the SPA (scheme + host + optional subpath). Used for Marketplace "Continue" links
+     * (e.g. {@code https://paperbolt.caelum.ai/login?marketplace=1&...}); must match how users load the frontend (no trailing slash).
+     * Set via {@code AZURE_MARKETPLACE_APP_BASE_URL} or legacy {@code AZURE_MARKETPLACE_APPBASEURL} (see {@code application.properties}).
+     */
     private String appBaseUrl;
 }

@@ -366,6 +366,12 @@ public class AzureMarketplaceService {
             base = "";
         }
 
+        if (base.isEmpty()) {
+            log.warn(
+                    "azure.marketplace.app-base-url is empty; set AZURE_MARKETPLACE_APP_BASE_URL (or legacy AZURE_MARKETPLACE_APPBASEURL) "
+                            + "to your public SPA origin (e.g. https://paperbolt.caelum.ai) so the Marketplace Continue link is absolute.");
+        }
+
         // Always redirect to login page - frontend will handle setup flow if needed.
         // app-base-url must be the public SPA origin (include subpath if the app is not at /).
         return base + "/login?marketplace=1&subscription=" + subscriptionId

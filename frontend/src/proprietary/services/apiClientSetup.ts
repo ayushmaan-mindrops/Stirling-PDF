@@ -1,4 +1,5 @@
 import { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { BASE_PATH, withBasePath } from '@app/constants/app';
 
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -82,9 +83,13 @@ async function refreshAuthToken(client: AxiosInstance): Promise<string> {
     clearJwtTokenFromStorage();
 
     // Redirect to login
-    if (window.location.pathname !== '/login') {
+    const currentPath = window.location.pathname.replace(/\/+$/, '');
+    const loginPath = withBasePath('/login').replace(/\/+$/, '');
+    // Also guard against '/login/' and subpath cases like '/app/login'
+    if (currentPath !== loginPath) {
       console.log('[API Client] Redirecting to login page...');
-      window.location.href = '/login';
+      // Preserve query params (e.g. Azure Marketplace onboarding: ?marketplace=1&subscription=...).
+      window.location.href = `${loginPath}${window.location.search}${window.location.hash}`;
     }
 
     throw error;
