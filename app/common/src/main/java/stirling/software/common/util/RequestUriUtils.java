@@ -149,11 +149,11 @@ public class RequestUriUtils {
      * @return true if the endpoint is public and doesn't require authentication
      */
     public static boolean isPublicAuthEndpoint(String requestURI, String contextPath) {
-        // Remove context path from URI to normalize path matching
-        String trimmedUri =
-                requestURI.startsWith(contextPath)
-                        ? requestURI.substring(contextPath.length())
-                        : requestURI;
+        // Remove context path from URI to normalize path matching.
+        // Important: in some servlet containers a "no context path" value can be "/".
+        // If contextPath == "/" we MUST NOT strip the leading "/" from requestURI,
+        // otherwise checks like trimmedUri.startsWith("/login") will fail.
+        String trimmedUri = stripContextPath(contextPath, requestURI);
 
         // Public auth endpoints that don't require authentication
         return trimmedUri.startsWith("/login")
@@ -192,9 +192,25 @@ public class RequestUriUtils {
     }
 
     private static String stripContextPath(String contextPath, String requestURI) {
-        if (contextPath != null && !contextPath.isBlank() && requestURI.startsWith(contextPath)) {
-            return requestURI.substring(contextPath.length());
+        if (requestURI == null) {
+            return null;
         }
+
+        if (contextPath == null) {
+            return requestURI;
+        }
+
+        String normalizedContextPath = contextPath.trim();
+
+        // Treat "/" as "no context path"
+        if (normalizedContextPath.isBlank() || "/".equals(normalizedContextPath)) {
+            return requestURI;
+        }
+
+        if (requestURI.startsWith(normalizedContextPath)) {
+            return requestURI.substring(normalizedContextPath.length());
+        }
+
         return requestURI;
     }
 }

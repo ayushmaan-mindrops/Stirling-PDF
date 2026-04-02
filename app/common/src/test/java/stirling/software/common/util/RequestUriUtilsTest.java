@@ -161,4 +161,12 @@ class RequestUriUtilsTest {
     void testIsPublicAuthEndpoint_withContextPath() {
         assertTrue(RequestUriUtils.isPublicAuthEndpoint("/app/login", "/app"));
     }
+
+    @Test
+    void testIsPublicAuthEndpoint_contextPathSlash() {
+        // Some servlet containers/configurations report "no context path" as "/".
+        // We must not strip the leading "/" from the request URI in that case,
+        // otherwise checks like trimmedUri.startsWith("/login") will fail.
+        assertTrue(RequestUriUtils.isPublicAuthEndpoint("/login", "/"));
+    }
 }
