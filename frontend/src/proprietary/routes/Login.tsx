@@ -359,25 +359,28 @@ export default function Login() {
       const emailParam = searchParams.get('email');
       const isMarketplace = searchParams.get('marketplace') === '1';
 
-      if (!isMarketplace || !subscriptionId || !emailParam) {
+      if (!isMarketplace || !subscriptionId) {
         return;
       }
 
       setIsCheckingSetup(true);
       try {
-        const response = await apiClient.get('/api/v1/marketplace/setup-status', {
-          params: { subscriptionId, email: emailParam }
-        });
+        const params: Record<string, string> = { subscriptionId };
+        if (emailParam) {
+          params.email = emailParam;
+        }
+
+        const response = await apiClient.get('/api/v1/marketplace/setup-status', { params });
 
         const data = response.data;
         if (data.needsSetup) {
           setMarketplaceNeedsSetup(true);
           setMarketplacePlanId(data.planId || 'basic');
-          setEmail(emailParam);
+          // Use email from API response (backend resolves from subscription if URL didn't include it)
+          setEmail(data.email || emailParam || '');
         }
       } catch (err) {
         console.error('[Login] Failed to check marketplace setup status:', err);
-        // Don't show error - just proceed with normal login flow
       } finally {
         setIsCheckingSetup(false);
       }

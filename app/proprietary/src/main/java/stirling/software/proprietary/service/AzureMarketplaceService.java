@@ -137,10 +137,16 @@ public class AzureMarketplaceService {
             
             if (existingSubscription.isPresent()) {
                 log.info("Subscription already exists: {}", subscriptionDetails.getSubscriptionId());
-                // Check if user exists and has a password - if not, redirect to setup
+                // Fall back to DB-stored email when the marketplace API doesn't return it
+                String emailForRedirect = purchaserEmail;
+                if ((emailForRedirect == null || emailForRedirect.isBlank())
+                        && existingSubscription.get().getPurchaserEmail() != null) {
+                    emailForRedirect = existingSubscription.get().getPurchaserEmail();
+                    log.info("Using DB-stored purchaser email for redirect: {}", emailForRedirect);
+                }
                 String redirectUrl = determineRedirectUrl(
                         subscriptionDetails.getSubscriptionId(), 
-                        purchaserEmail);
+                        emailForRedirect);
                 log.info("Marketplace redirect URL (existing): {}", redirectUrl);
                 return MarketplaceProvisioningResult.builder()
                         .subscriptionId(subscriptionDetails.getSubscriptionId())

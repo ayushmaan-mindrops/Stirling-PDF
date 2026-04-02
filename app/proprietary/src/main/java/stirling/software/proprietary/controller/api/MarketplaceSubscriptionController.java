@@ -25,7 +25,9 @@ import stirling.software.proprietary.model.MarketplaceSubscription;
 import stirling.software.proprietary.model.MarketplaceSubscription.SubscriptionStatus;
 import stirling.software.proprietary.repository.MarketplaceSubscriptionRepository;
 import stirling.software.proprietary.security.database.repository.UserRepository;
+import stirling.software.common.model.enumeration.Role;
 import stirling.software.proprietary.security.model.AuthenticationType;
+import stirling.software.proprietary.security.model.Authority;
 import stirling.software.proprietary.security.model.User;
 
 /**
@@ -131,13 +133,12 @@ public class MarketplaceSubscriptionController {
     public ResponseEntity<?> checkSetupStatus(
             @Parameter(description = "Marketplace subscription ID")
             @RequestParam("subscriptionId") String subscriptionId,
-            @Parameter(description = "User email address")
-            @RequestParam("email") String email) {
+            @Parameter(description = "User email address (optional — looked up from subscription if absent)")
+            @RequestParam(value = "email", required = false) String email) {
         
         log.info("Checking setup status for subscription {} and email {}", subscriptionId, email);
         
         try {
-            // Find the subscription
             Optional<MarketplaceSubscription> subscriptionOpt = subscriptionRepository.findBySubscriptionId(subscriptionId);
             
             if (subscriptionOpt.isEmpty()) {
@@ -148,10 +149,23 @@ public class MarketplaceSubscriptionController {
             }
             
             MarketplaceSubscription subscription = subscriptionOpt.get();
+
+            // Resolve the effective email: prefer the caller-supplied value, fall back to DB
+            String effectiveEmail = (email != null && !email.isBlank())
+                    ? email
+                    : subscription.getPurchaserEmail();
+
+            if (effectiveEmail == null || effectiveEmail.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "No email associated with this subscription"
+                ));
+            }
             
-            // Verify email matches the purchaser
-            if (subscription.getPurchaserEmail() == null || 
-                !email.equalsIgnoreCase(subscription.getPurchaserEmail())) {
+            // When both are present, verify they match
+            if (email != null && !email.isBlank()
+                    && subscription.getPurchaserEmail() != null
+                    && !email.equalsIgnoreCase(subscription.getPurchaserEmail())) {
                 return ResponseEntity.badRequest().body(Map.of(
                     "status", "error",
                     "message", "Email does not match subscription purchaser"
@@ -159,14 +173,14 @@ public class MarketplaceSubscriptionController {
             }
             
             // Check if user already exists with a password
-            Optional<User> existingUser = userRepository.findByUsernameIgnoreCase(email);
+            Optional<User> existingUser = userRepository.findByUsernameIgnoreCase(effectiveEmail);
             boolean needsSetup = existingUser.isEmpty() || 
                     existingUser.get().getPassword() == null || 
                     existingUser.get().getPassword().isEmpty();
             
             return ResponseEntity.ok(Map.of(
                 "needsSetup", needsSetup,
-                "email", email,
+                "email", effectiveEmail,
                 "planId", subscription.getPlanId() != null ? subscription.getPlanId() : "basic"
             ));
             
@@ -215,9 +229,22 @@ public class MarketplaceSubscriptionController {
             
             MarketplaceSubscription subscription = subscriptionOpt.get();
             
-            // Verify email matches the purchaser
-            if (subscription.getPurchaserEmail() == null || 
-                !request.email().equalsIgnoreCase(subscription.getPurchaserEmail())) {
+            // Resolve effective email: prefer request value, fall back to DB-stored purchaser email
+            String effectiveEmail = (request.email() != null && !request.email().isBlank())
+                    ? request.email()
+                    : subscription.getPurchaserEmail();
+
+            if (effectiveEmail == null || effectiveEmail.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "No email associated with this subscription"
+                ));
+            }
+
+            // When both are present, verify they match
+            if (request.email() != null && !request.email().isBlank()
+                    && subscription.getPurchaserEmail() != null
+                    && !request.email().equalsIgnoreCase(subscription.getPurchaserEmail())) {
                 return ResponseEntity.badRequest().body(Map.of(
                     "status", "error",
                     "message", "Email does not match subscription purchaser"
@@ -225,20 +252,30 @@ public class MarketplaceSubscriptionController {
             }
             
             // Create or update user
-            User user = userRepository.findByUsernameIgnoreCase(request.email())
-                    .orElseGet(() -> {
-                        User newUser = new User();
-                        newUser.setUsername(request.email());
-                        newUser.setEnabled(true);
-                        return newUser;
-                    });
+            boolean isNewUser = false;
+            User user = userRepository.findByUsernameIgnoreCase(effectiveEmail)
+                    .orElse(null);
+            
+            if (user == null) {
+                isNewUser = true;
+                user = new User();
+                user.setUsername(effectiveEmail);
+                user.setEnabled(true);
+                user.setRoleName(Role.USER.getRoleId());
+            }
             
             // Set password and authentication type
             user.setPassword(passwordEncoder.encode(request.password()));
             user.setAuthenticationType(AuthenticationType.WEB);
             user = userRepository.save(user);
+
+            // Assign ROLE_USER authority for new users so Spring Security grants access
+            if (isNewUser) {
+                new Authority(Role.USER.getRoleId(), user);
+                user = userRepository.save(user);
+            }
             
-            log.info("Created/updated user account for: {}", request.email());
+            log.info("Created/updated user account for: {}", effectiveEmail);
             
             // Link subscription to user and activate
             subscription.setUser(user);
@@ -246,12 +283,12 @@ public class MarketplaceSubscriptionController {
             subscriptionRepository.save(subscription);
             
             log.info("Successfully set up account and linked subscription {} to user {}", 
-                    request.subscriptionId(), request.email());
+                    request.subscriptionId(), effectiveEmail);
             
             return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "message", "Account created successfully. You can now sign in.",
-                "email", request.email(),
+                "email", effectiveEmail,
                 "planId", subscription.getPlanId() != null ? subscription.getPlanId() : "basic"
             ));
             
