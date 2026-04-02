@@ -381,6 +381,10 @@ export default function Login() {
         }
       } catch (err) {
         console.error('[Login] Failed to check marketplace setup status:', err);
+        // If we can't confirm setup status, don't leave users stuck on normal login.
+        // Default to showing the marketplace password creation form.
+        setMarketplaceNeedsSetup(true);
+        setMarketplacePlanId('basic');
       } finally {
         setIsCheckingSetup(false);
       }
@@ -395,8 +399,8 @@ export default function Login() {
   const handleMarketplaceSetup = useCallback(async () => {
     const subscriptionId = searchParams.get('subscription');
     
-    if (!subscriptionId || !email) {
-      setError(t('marketplace.missingParams', 'Missing subscription or email information.'));
+    if (!subscriptionId) {
+      setError(t('marketplace.missingParams', 'Missing subscription information.'));
       return;
     }
 
@@ -416,7 +420,8 @@ export default function Login() {
     try {
       const response = await apiClient.post('/api/v1/marketplace/setup-account', {
         subscriptionId,
-        email,
+        // Email can be omitted if backend resolves it from the subscription record.
+        email: email || undefined,
         password: newPassword
       });
 
