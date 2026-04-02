@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@app/auth/UseSession'
 import { useAppConfig } from '@app/contexts/AppConfigContext'
 import HomePage from '@app/pages/HomePage'
@@ -21,7 +21,10 @@ export default function Landing() {
   const backendProbe = useBackendProbe();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
+
+  const isMarketplaceRedirect = searchParams.get('marketplace') === '1';
 
   const loading = authLoading || configLoading || backendProbe.loading;
 
@@ -100,6 +103,23 @@ export default function Landing() {
     console.debug('[Landing] Login disabled - showing app in anonymous mode');
     return (
       <HomePage />
+    );
+  }
+
+  // Azure Marketplace onboarding uses /login?marketplace=1&subscription=... — send users there
+  // immediately so Landing's backend probe does not flash "Backend not found" and strip context.
+  if (
+    !session &&
+    isMarketplaceRedirect &&
+    config?.enableLogin === true &&
+    !backendProbe.loginDisabled
+  ) {
+    return (
+      <Navigate
+        to={{ pathname: '/login', search: location.search }}
+        replace
+        state={{ from: location }}
+      />
     );
   }
 

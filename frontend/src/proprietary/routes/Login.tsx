@@ -490,7 +490,11 @@ export default function Login() {
       const result = await backendProbe.probe();
       if (result.status === 'up') {
         await refetch();
-        navigate('/', { replace: true });
+        // Stay on /login with query string (e.g. marketplace=1&subscription=...) — do not send to /
+        navigate(
+          { pathname: location.pathname, search: location.search },
+          { replace: true }
+        );
       }
     };
     return (

@@ -358,10 +358,17 @@ public class AzureMarketplaceService {
         String encodedEmail = purchaserEmail != null 
                 ? URLEncoder.encode(purchaserEmail, StandardCharsets.UTF_8) 
                 : "";
-        
-        // Always redirect to login page - frontend will handle setup flow if needed
-        return config.getAppBaseUrl()
-                + "/login?marketplace=1&subscription=" + subscriptionId
+
+        String base = config.getAppBaseUrl();
+        if (base != null) {
+            base = base.replaceAll("/+$", "");
+        } else {
+            base = "";
+        }
+
+        // Always redirect to login page - frontend will handle setup flow if needed.
+        // app-base-url must be the public SPA origin (include subpath if the app is not at /).
+        return base + "/login?marketplace=1&subscription=" + subscriptionId
                 + (purchaserEmail != null ? "&email=" + encodedEmail : "");
     }
 

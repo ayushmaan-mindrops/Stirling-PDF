@@ -25,5 +25,6 @@ public class AzureMarketplaceConfig {
     
     private String webhookSecret;
     
+    /** Public URL of the SPA (scheme + host + optional subpath). Used for Marketplace "Continue" links; must match how users load the frontend (no trailing slash required). */
     private String appBaseUrl;
 }
